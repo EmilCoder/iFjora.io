@@ -1,0 +1,54 @@
+{
+  "name": "ifjora.io",
+  "version": "1.0.0",
+  "description": "Repository for ifjora webløsning",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx src/server.ts",
+    "dev:watch": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "client:dev": "vite --config client/vite.config.ts",
+    "client:build": "vite build --config client/vite.config.ts",
+    "client:preview": "vite preview --config client/vite.config.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EmilCoder/iFjora.io.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/EmilCoder/iFjora.io/issues"
+  },
+  "homepage": "https://github.com/EmilCoder/iFjora.io#readme",
+  "dependencies": {
+    "@fastify/cors": "^10.0.2",
+    "@prisma/adapter-mariadb": "6.19.0",
+    "@prisma/client": "6.19.0",
+    "argon2": "^0.44.0",
+    "dotenv": "^16.4.5",
+    "fastify": "^5.6.2",
+    "jsonwebtoken": "^9.0.2",
+    "mariadb": "^3.4.5"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "prisma": "6.19.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.10.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.6"
+  }
+}

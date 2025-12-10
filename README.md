@@ -7,7 +7,13 @@ Repository for ifjora webløsning
    DATABASE_URL="mysql://app:app@localhost:3306/ifjora"
    JWT_SECRET="en-lang-random-hemmelighet"
    ```
-2. Sørg for at MySQL/MariaDB kjører (f.eks. `brew services start mysql@8.4`).
+2. Sørg for at MySQL/MariaDB kjører:
+   - **Via Homebrew (terminal)**: `brew services start mysql@8.4` (eller `brew services start mariadb` hvis du bruker MariaDB).
+   - **Via installert MySQL-app**: Start serveren fra appen (f.eks. MySQL Workbench / pref-pane) og bekreft at den lytter på `localhost:3306`.
+   - Test at tjenesten svarer:
+     ```
+     mysql -u app -papp -h 127.0.0.1 -e "SELECT 1;"
+     ```
 3. Installer avhengigheter:
    ```
    npm install

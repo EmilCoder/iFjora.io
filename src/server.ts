@@ -14,6 +14,27 @@ type IdeaBody = {
   content: string;
 };
 
+type AdminDeleteParams = {
+  id: string;
+};
+
+type AdminUserResult = {
+  id: number;
+  email: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type AdminIdeaResult = {
+  id: number;
+  title: string;
+  content: string;
+  createdAt: Date;
+  userId: number;
+  userEmail: string;
+  analysis?: AiAnalysis | undefined;
+};
+
 type IdeaResult = {
   id: number;
   title: string;
@@ -37,6 +58,7 @@ type UpdateMeBody = {
 type JwtPayload = {
   id: number;
   email: string;
+  isAdmin?: boolean;
 };
 
 declare module "fastify" {
@@ -110,6 +132,7 @@ async function requireUser(
       const userPayload = {
         id: (decoded as JwtPayload).id,
         email: (decoded as JwtPayload).email,
+        isAdmin: (decoded as JwtPayload).isAdmin ?? false,
       };
       request.user = userPayload;
       return userPayload;
@@ -121,6 +144,19 @@ async function requireUser(
     reply.code(401).send({ message: "Ugyldig eller utløpt token." });
     return;
   }
+}
+
+async function requireAdmin(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<JwtPayload | undefined> {
+  const user = await requireUser(request, reply);
+  if (!user) return;
+  if (!user.isAdmin) {
+    reply.code(403).send({ message: "Kun admin har tilgang." });
+    return;
+  }
+  return user;
 }
 
 app.get("/api/health", async () => ({ status: "ok" }));
@@ -136,6 +172,10 @@ app.post<{ Body: AuthBody }>("/api/register", async (request, reply) => {
     return reply.code(400).send({ message: "Passord må være minst 8 tegn." });
   }
 
+  if (email === "admin@admin.com") {
+    return reply.code(400).send({ message: "Kan ikke registrere admin-brukeren." });
+  }
+
   const existingUser = await prisma.user.findUnique({ where: { email } });
   if (existingUser) {
     return reply.code(409).send({ message: "E-post er allerede registrert." });
@@ -146,8 +186,8 @@ app.post<{ Body: AuthBody }>("/api/register", async (request, reply) => {
     data: { email, passwordHash },
   });
 
-  const token = issueToken({ id: user.id, email: user.email });
-  return reply.code(201).send({ id: user.id, email: user.email, token });
+  const token = issueToken({ id: user.id, email: user.email, isAdmin: false });
+  return reply.code(201).send({ id: user.id, email: user.email, token, isAdmin: false });
 });
 
 app.post<{ Body: AuthBody }>("/api/login", async (request, reply) => {
@@ -155,6 +195,12 @@ app.post<{ Body: AuthBody }>("/api/login", async (request, reply) => {
 
   if (!email || !password) {
     return reply.code(400).send({ message: "E-post og passord må fylles ut." });
+  }
+
+  // Hardkodet admin-konto
+  if (email === "admin@admin.com" && password === "admin") {
+    const token = issueToken({ id: -1, email, isAdmin: true });
+    return reply.send({ id: -1, email, token, isAdmin: true });
   }
 
   const user = await prisma.user.findUnique({ where: { email } });
@@ -167,8 +213,8 @@ app.post<{ Body: AuthBody }>("/api/login", async (request, reply) => {
     return reply.code(401).send({ message: "Ugyldig e-post eller passord." });
   }
 
-  const token = issueToken({ id: user.id, email: user.email });
-  return reply.send({ id: user.id, email: user.email, token });
+  const token = issueToken({ id: user.id, email: user.email, isAdmin: false });
+  return reply.send({ id: user.id, email: user.email, token, isAdmin: false });
 });
 
 app.get("/api/me", async (request, reply) => {
@@ -320,6 +366,106 @@ app.get("/api/ideas", async (request, reply) => {
   });
 
   return reply.send(result);
+});
+
+app.delete<{ Params: AdminDeleteParams }>("/api/ideas/:id", async (request, reply) => {
+  const user = await requireUser(request, reply);
+  if (!user) return;
+
+  const id = Number(request.params.id);
+  if (Number.isNaN(id)) {
+    return reply.code(400).send({ message: "Ugyldig id." });
+  }
+
+  const idea = await prisma.idea.findUnique({ where: { id } });
+  if (!idea) {
+    return reply.code(404).send({ message: "Fant ikke idéen." });
+  }
+  if (idea.userId !== user.id) {
+    return reply.code(403).send({ message: "Du kan bare slette dine egne ideer." });
+  }
+
+  await prisma.idea.delete({ where: { id } });
+  return reply.code(204).send();
+});
+
+// Admin endpoints
+app.get("/api/admin/users", async (request, reply) => {
+  const admin = await requireAdmin(request, reply);
+  if (!admin) return;
+
+  const users = await prisma.user.findMany({
+    orderBy: { createdAt: "desc" },
+  });
+
+  const result: AdminUserResult[] = users.map((u) => ({
+    id: u.id,
+    email: u.email,
+    createdAt: u.createdAt,
+    updatedAt: u.updatedAt,
+  }));
+
+  return reply.send(result);
+});
+
+app.get("/api/admin/ideas", async (request, reply) => {
+  const admin = await requireAdmin(request, reply);
+  if (!admin) return;
+
+  const ideas = await prisma.idea.findMany({
+    orderBy: { createdAt: "desc" },
+    include: {
+      user: { select: { id: true, email: true } },
+    },
+  });
+
+  const result: AdminIdeaResult[] = ideas.map((idea) => {
+    let parsed: AiAnalysis | undefined;
+    if (idea.aiReply) {
+      try {
+        parsed = JSON.parse(idea.aiReply) as AiAnalysis;
+      } catch (err) {
+        request.log.warn({ err }, "Kunne ikke parse aiReply");
+      }
+    }
+    return {
+      id: idea.id,
+      title: idea.title,
+      content: idea.content,
+      createdAt: idea.createdAt,
+      userId: idea.userId,
+      userEmail: idea.user.email,
+      analysis: parsed,
+    };
+  });
+
+  return reply.send(result);
+});
+
+app.delete<{ Params: AdminDeleteParams }>("/api/admin/users/:id", async (request, reply) => {
+  const admin = await requireAdmin(request, reply);
+  if (!admin) return;
+
+  const id = Number(request.params.id);
+  if (Number.isNaN(id)) {
+    return reply.code(400).send({ message: "Ugyldig id." });
+  }
+
+  await prisma.user.delete({ where: { id } });
+  return reply.code(204).send();
+});
+
+app.delete<{ Params: AdminDeleteParams }>("/api/admin/ideas/:id", async (request, reply) => {
+  const admin = await requireAdmin(request, reply);
+  if (!admin) return;
+
+  const id = Number(request.params.id);
+  if (Number.isNaN(id)) {
+    return reply.code(400).send({ message: "Ugyldig id." });
+  }
+
+  await prisma.idea.delete({ where: { id } });
+  return reply.code(204).send();
 });
 
 app.addHook("onClose", async () => {

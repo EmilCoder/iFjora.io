@@ -6,15 +6,20 @@ import InsightsPage from "./pages/InsightsPage";
 import AuthPage from "./pages/AuthPage";
 import ProfilePage from "./pages/ProfilePage";
 import logo from "./fjora_logo.png";
+import AdminPage from "./pages/AdminPage";
 
 function App() {
   const [token, setToken] = useState<string | null>(
     () => localStorage.getItem("token")
   );
+  const [isAdmin, setIsAdmin] = useState<boolean>(
+    () => localStorage.getItem("isAdmin") === "1"
+  );
 
   useEffect(() => {
     const listener = () => {
       setToken(localStorage.getItem("token"));
+      setIsAdmin(localStorage.getItem("isAdmin") === "1");
     };
     window.addEventListener("storage", listener);
     return () => window.removeEventListener("storage", listener);
@@ -22,7 +27,9 @@ function App() {
 
   function handleLogout() {
     localStorage.removeItem("token");
+    localStorage.removeItem("isAdmin");
     setToken(null);
+    setIsAdmin(false);
   }
 
   return (
@@ -36,6 +43,7 @@ function App() {
             <Link to="/">Hjem</Link>
             <Link to="/ideas">Ideinnsending</Link>
             <Link to="/insights">Innsikt</Link>
+            {isAdmin && <Link to="/admin">Admin</Link>}
           </nav>
         </div>
         <nav className="header-actions">
@@ -72,10 +80,12 @@ function App() {
               <AuthPage
                 onAuthSuccess={(tok) => {
                   setToken(tok);
+                  setIsAdmin(localStorage.getItem("isAdmin") === "1");
                 }}
               />
             }
           />
+          {isAdmin && <Route path="/admin" element={<AdminPage />} />}
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="*" element={<LandingPage />} />
         </Routes>

@@ -24,45 +24,32 @@ function IdeaSubmissionPage() {
   const [content, setContent] = useState("");
   const [status, setStatus] = useState("");
   const [statusType, setStatusType] = useState<"idle" | "success" | "error" | "info">("idle");
-  const [analysis, setAnalysis] = useState<IdeaResponse["analysis"] | null>(
-    null
-  );
+  const [analysis, setAnalysis] = useState<IdeaResponse["analysis"] | null>(null);
   const navigate = useNavigate();
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setStatus("Du må være logget inn for å analysere ideen.");
+      setStatusType("error");
+      return;
+    }
+
     setStatus("Sender inn...");
     setStatusType("info");
     setAnalysis(null);
 
-    async function sendRequest(withToken: boolean) {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      const token = withToken ? localStorage.getItem("token") : null;
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
-
+    try {
       const res = await fetch(`${API_URL}/api/ideas`, {
         method: "POST",
-        headers,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ title, content }),
       });
-
-      return res;
-    }
-
-    try {
-      // First try with token (if present)
-      let res = await sendRequest(true);
-
-      // If token is invalid, clear it and retry once without token
-      if (res.status === 401) {
-        localStorage.removeItem("token");
-        res = await sendRequest(false);
-      }
 
       if (!res.ok) {
         const err = (await res.json()) as ErrorResponse;
@@ -78,14 +65,7 @@ function IdeaSubmissionPage() {
       setTitle("");
       setContent("");
 
-      const latestAnalysis = {
-        title: data.title,
-        content: data.content,
-        analysis: data.analysis ?? null,
-        createdAt: new Date().toISOString(),
-        note: (data as any).note as string | undefined,
-      };
-      navigate("/insights", { state: { latestAnalysis } });
+      // Bli på siden og vis analysen her; ingen redirect
     } catch {
       setStatus("Klarte ikke å kontakte serveren.");
       setStatusType("error");
@@ -152,7 +132,11 @@ function IdeaSubmissionPage() {
             />
           </div>
 
-          <button className="idea-submit" type="submit" disabled={status === "Sender inn..."}>
+          <button
+            className="idea-submit"
+            type="submit"
+            disabled={status === "Sender inn..."}
+          >
             {status === "Sender inn..." ? "Analyserer..." : "Analyser"}
           </button>
         </form>

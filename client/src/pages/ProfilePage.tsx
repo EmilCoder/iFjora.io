@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
@@ -17,6 +18,7 @@ function ProfilePage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<string>("");
+  const navigate = useNavigate();
 
   async function fetchMe() {
     const token = localStorage.getItem("token");
@@ -66,7 +68,6 @@ function ProfilePage() {
           password: password || undefined,
         }),
       });
-
       if (!res.ok) {
         const err = (await res.json()) as ErrorResponse;
         setStatus(err.message ?? "Kunne ikke oppdatere profil.");
@@ -82,33 +83,56 @@ function ProfilePage() {
   }
 
   return (
-    <section className="page">
-      <h1>Profil / Min side</h1>
-      <p>Oppdater e-post og eventuelt passord.</p>
-      <form className="auth-form" onSubmit={handleUpdate}>
-        <label>
-          E-post
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </label>
-        <label>
-          Nytt passord (valgfritt)
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            minLength={8}
-            placeholder="La stå tomt for å beholde nåværende"
-          />
-        </label>
-        <button type="submit">Lagre endringer</button>
-      </form>
-      {status && <p className="status">{status}</p>}
-    </section>
+    <div className="profile-page">
+      <div className="profile-card">
+        <div className="profile-card-header">
+          <div>
+            <p className="eyebrow">Min side</p>
+            <h1>Din konto</h1>
+            <p className="profile-sub">
+              Oppdater e-post og passord. Endringer gjelder kun deg og krever innlogging.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="profile-nav-btn"
+            onClick={() => navigate("/insights")}
+          >
+            Se innsikt
+          </button>
+        </div>
+
+        <form className="profile-form" onSubmit={handleUpdate}>
+          <div className="profile-field">
+            <label>E-post</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="profile-field">
+            <label>Nytt passord (valgfritt)</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              minLength={8}
+              placeholder="La stå tomt for å beholde nåværende"
+            />
+            <small>Minst 8 tegn. Feltet kan stå tomt hvis du ikke vil endre passord.</small>
+          </div>
+          <div className="profile-actions">
+            <button type="submit" className="profile-save">
+              Lagre endringer
+            </button>
+          </div>
+        </form>
+
+        {status && <div className="status-banner status-info">{status}</div>}
+      </div>
+    </div>
   );
 }
 

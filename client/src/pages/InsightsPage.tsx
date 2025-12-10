@@ -62,23 +62,45 @@ function InsightsPage() {
     fetchIdeas();
   }, []);
 
-  const strengths = activeInsight?.analysis?.strengths ?? [
-    "Tydelig problemformulering",
-    "Konkrete brukere",
-  ];
-  const weaknesses = activeInsight?.analysis?.weaknesses ?? [
-    "Behov for mer validering",
-    "Uavklart målgruppe",
-  ];
-  const summary =
-    activeInsight?.analysis?.summary ??
-    "Foreløpig vurdering: lovende, men krever videre utforskning.";
-  const title =
-    activeInsight?.title ?? "Deling av matoverskudd i nabolaget";
-  const content =
-    activeInsight?.content ??
-    "En app der naboer kan dele overskuddsmat slik at mindre går til spille. Brukerne legger ut mat som kan hentes gratis eller byttes.";
-  const score = activeInsight?.analysis?.score ?? 74;
+  const strengths = activeInsight?.analysis?.strengths;
+  const weaknesses = activeInsight?.analysis?.weaknesses;
+  const summary = activeInsight?.analysis?.summary;
+  const title = activeInsight?.title;
+  const content = activeInsight?.content;
+  const score = activeInsight?.analysis?.score;
+
+  if (!activeInsight) {
+    return (
+      <div className="insights-page">
+        <div className="insights-shell">
+          <section className="insights-hero">
+            <div className="insights-hero-text">
+              <p className="eyebrow">Innsikt</p>
+              <h1>Ingen ideer ennå</h1>
+              <p>Send inn en idé for å få simulert analyse og innsikt her.</p>
+            </div>
+          </section>
+
+          <div className="insights-actions">
+            <button
+              type="button"
+              className="insights-btn solid"
+              onClick={() => navigate("/ideas")}
+            >
+              Send inn første idé
+            </button>
+            <button
+              type="button"
+              className="insights-btn outline"
+              onClick={() => navigate("/auth")}
+            >
+              Logg inn / Registrer
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const barCategories = [
     { label: "Teamets styrke", value: 75 },
@@ -352,12 +374,10 @@ function InsightsPage() {
           </div>
         </div>
 
-        {status && <p className="status">{status}</p>}
-
-        <div className="insights-actions">
-          <button
-            type="button"
-            className="insights-btn outline"
+      <div className="insights-actions">
+        <button
+          type="button"
+          className="insights-btn outline"
             onClick={() => navigate("/ideas")}
           >
             Prøv ny idé
@@ -370,9 +390,16 @@ function InsightsPage() {
             Lagre resultatet
           </button>
         </div>
-        </div>
       </div>
+
+      {!activeInsight && (
+        <div className="card">
+          <h3>Ingen ideer ennå</h3>
+          <p>Send inn en idé for å se innsikt og analyse her.</p>
+        </div>
+      )}
     </div>
+  </div>
   );
 }
 

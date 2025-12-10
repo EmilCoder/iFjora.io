@@ -28,9 +28,16 @@ function App() {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <Link to="/" className="brand brand-logo" aria-label="Gå til forsiden">
-          <img src={logo} alt="Fjora logo" />
-        </Link>
+        <div className="header-left">
+          <Link to="/" className="brand brand-logo" aria-label="Gå til forsiden">
+            <img src={logo} alt="Fjora logo" />
+          </Link>
+          <nav className="main-nav">
+            <Link to="/">Hjem</Link>
+            <Link to="/ideas">Ideinnsending</Link>
+            <Link to="/insights">Innsikt</Link>
+          </nav>
+        </div>
         <nav className="header-actions">
           {!token && (
             <>
@@ -41,6 +48,11 @@ function App() {
                 Registrer deg
               </Link>
             </>
+          )}
+          {token && (
+            <Link className="header-btn solid" to="/profile">
+              Min side
+            </Link>
           )}
           {token && (
             <button className="header-btn outline" type="button" onClick={handleLogout}>

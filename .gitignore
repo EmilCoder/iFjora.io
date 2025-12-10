@@ -2,10 +2,15 @@ node_modules
 # Keep environment variables out of version control
 .env
 
-/src/generated/prisma
+# Generated prisma config/artifacts
+prisma.config.js
+prisma.config.js.map
+prisma.config.d.ts
+prisma.config.d.ts.map
+prisma.config.mjs
+prisma.config.cjs
 
-/src/generated/prisma
-
+# Prisma client output (if generated here)
 /src/generated/prisma
 
 # Frontend build/cache

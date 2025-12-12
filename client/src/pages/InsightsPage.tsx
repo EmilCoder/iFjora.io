@@ -8,11 +8,22 @@ type IdeaListItem = {
   title: string;
   content: string;
   createdAt: string;
+  market?: string | null;
+  techService?: string | null;
+  country?: string | null;
+  region?: string | null;
+  city?: string | null;
+  fundingTotal?: number | null;
+  fundingRounds?: number | null;
   analysis?: {
     score?: number;
+    dataScore?: number;
+    ideaScore?: number | null;
+    combinedScore?: number;
     strengths?: string[];
     weaknesses?: string[];
     summary?: string;
+    explanation?: string | null;
   };
 };
 
@@ -75,7 +86,29 @@ function InsightsPage() {
   const summary = activeInsight?.analysis?.summary;
   const title = activeInsight?.title;
   const content = activeInsight?.content;
-  const score = activeInsight?.analysis?.score;
+  const score = activeInsight?.analysis?.combinedScore ?? activeInsight?.analysis?.score;
+  const dataScore = activeInsight?.analysis?.dataScore;
+  const ideaScore = activeInsight?.analysis?.ideaScore;
+  const explanation = activeInsight?.analysis?.explanation;
+  const market = activeInsight?.market;
+  const techService = activeInsight?.techService;
+  const country = activeInsight?.country;
+  const region = activeInsight?.region;
+  const city = activeInsight?.city;
+  const fundingTotal = activeInsight?.fundingTotal;
+  const fundingRounds = activeInsight?.fundingRounds;
+  const strengthsList = strengths && strengths.length > 0 ? strengths : ["Ingen styrker mottatt fra AI."];
+  const weaknessesList =
+    weaknesses && weaknesses.length > 0 ? weaknesses : ["Ingen svakheter mottatt fra AI."];
+
+  const parsedExplanation = useMemo(() => {
+    if (!explanation) return null;
+    try {
+      return JSON.parse(explanation) as any;
+    } catch {
+      return null;
+    }
+  }, [explanation]);
 
   async function handleDeleteIdea(id: number) {
     const token = localStorage.getItem("token");
@@ -132,62 +165,6 @@ function InsightsPage() {
       </div>
     );
   }
-
-  const barCategories = [
-    { label: "Teamets styrke", value: 75 },
-    { label: "Vekstpotensial", value: 68 },
-    { label: "Markedsstørrelse", value: 72 },
-    { label: "Produktkvalitet", value: 70 },
-    { label: "Modenhet", value: 65 },
-  ];
-
-  const competitors = [
-    {
-      name: "Too Good To Go",
-      description: "Kjent aktør som lar folk hente overskuddsmat fra butikker/restauranter.",
-      pros: [
-        "Stor base av brukere og butikker",
-        "Sterkt varemerke og bred kjennskap",
-        "Har etablert logistikk/partnerskap",
-      ],
-      cons: [
-        "Fokuserer mest på butikker, ikke nabolag",
-        "Kan ha høy konkurranse i byer",
-        "Lite personlige/nære delingsfunksjoner",
-      ],
-      icon: "🍱",
-    },
-    {
-      name: "Facebook-grupper",
-      description: "Lokale grupper for salg/gi bort, men ikke matspesifikke.",
-      pros: [
-        "Mange brukere allerede på plattformen",
-        "Lav terskel å poste",
-        "Kan gi rask respons i aktive grupper",
-      ],
-      cons: [
-        "Lite struktur for mat (holdbarhet/sikkerhet)",
-        "Ingen verifisering av kvalitet",
-        "Uoversiktlig feed, mye støy",
-      ],
-      icon: "📘",
-    },
-    {
-      name: "OLIO",
-      description: "Internasjonal matdelings-app som matcher naboer.",
-      pros: [
-        "App skreddersydd for matdeling",
-        "Har funksjoner for nabomatching",
-        "Større nettverk i enkelte regioner",
-      ],
-      cons: [
-        "Kan være få brukere i enkelte områder",
-        "Lite lokal tilpasning",
-        "Fokuserer ikke på innsikt/score",
-      ],
-      icon: "🍊",
-    },
-  ];
 
   return (
     <div className="insights-page">
@@ -247,7 +224,7 @@ function InsightsPage() {
               <div className="insights-card-header">
                 <div>
                   <h2>Din beskrivelse</h2>
-                  <p className="insights-muted">{summary}</p>
+                  {summary && <p className="insights-muted">{summary}</p>}
                 </div>
                 <button
                   type="button"
@@ -260,95 +237,47 @@ function InsightsPage() {
               <p>{content}</p>
             </div>
 
-            <div className="insights-grid-2">
-              <div className="insights-card">
-                <h3>Risikovurdering</h3>
-                <p className="insights-muted">
-                  Foreløpig vurdering av risiko- og usikkerhetsnivå basert på tekstinput.
-                </p>
-                <div className="insights-risk-box">
-                  <span>Lav</span>
-                  <span>Middels</span>
-                  <span>Høy</span>
-                  <span>Risiko</span>
-                </div>
+            <div className="insights-grid-3">
+              <div className="insights-card metric-card">
+                <div className="metric-label">Kombinert score</div>
+                <div className="metric-value">{score ?? "—"}</div>
+                <p className="insights-muted">Vektet kombinasjon av data- og idéanalyse.</p>
               </div>
-
-              <div className="insights-card">
-                <div className="insights-card-header">
-                  <h3>Scorekort</h3>
-                  <div className="pill">Totalt: {score}/100</div>
-                </div>
-                <div className="insights-bars">
-                  {barCategories.map((cat) => (
-                    <div key={cat.label} className="insights-bar-row">
-                      <span>{cat.label}</span>
-                      <div className="insights-bar">
-                        <div className="insights-bar-fill" style={{ width: `${cat.value}%` }} />
-                      </div>
-                      <span className="insights-bar-val">{cat.value}%</span>
-                    </div>
-                  ))}
-                </div>
+              <div className="insights-card metric-card">
+                <div className="metric-label">Data-modell</div>
+                <div className="metric-value">{dataScore ?? "—"}</div>
+                <p className="insights-muted">Basert på historiske mønstre/funding/geografi.</p>
+              </div>
+              <div className="insights-card metric-card">
+                <div className="metric-label">Idé/VC-score</div>
+                <div className="metric-value">{ideaScore ?? "—"}</div>
+                <p className="insights-muted">Språkmodellens vurdering av pitch/idé.</p>
               </div>
             </div>
 
-            <div className="insights-stack">
-              <div className="insights-card">
-                <h3>Teamets styrke</h3>
-                <p className="insights-muted">
-                  Oppsummering av teamets relevante erfaring og gjennomføringsevne.
-                </p>
-                <div className="insights-bar insights-long">
-                  <div className="insights-bar-fill" style={{ width: "82%" }} />
-                </div>
-              </div>
-
-              <div className="insights-card">
-                <h3>Markedspotensial</h3>
-                <p className="insights-muted">
-                  Foreløpig vurdering av markedets størrelse og betalingsvilje.
-                </p>
-                <div className="insights-bar insights-long">
-                  <div className="insights-bar-fill" style={{ width: "78%" }} />
-                </div>
-              </div>
-
-              <div className="insights-card">
-                <h3>Produktkvalitet</h3>
-                <p className="insights-muted">
-                  Hvor tydelig og gjennomførbar produktideen fremstår basert på input.
-                </p>
-                <div className="insights-bar insights-long">
-                  <div className="insights-bar-fill" style={{ width: "70%" }} />
-                </div>
-              </div>
-
-              <div className="insights-card">
-                <h3>Vekstpotensial</h3>
-                <p className="insights-muted">
-                  Indikasjon på skaleringsevne og videre vekstmuligheter.
-                </p>
-                <div className="insights-bar insights-long">
-                  <div className="insights-bar-fill" style={{ width: "77%" }} />
-                </div>
-              </div>
-
-              <div className="insights-card">
-                <h3>Økonomisk modenhet</h3>
-                <p className="insights-muted">
-                  Vurdering av forretningsmodell og økonomisk robusthet.
-                </p>
-                <div className="insights-bar insights-long">
-                  <div className="insights-bar-fill" style={{ width: "75%" }} />
-                </div>
+            <div className="insights-card">
+              <h3>Metadata</h3>
+              <div className="meta-chips">
+                {market && <span className="meta-chip">Marked: {market}</span>}
+                {techService && <span className="meta-chip">Teknologi: {techService}</span>}
+                {(country || region || city) && (
+                  <span className="meta-chip">
+                    Lokasjon: {[city, region, country].filter(Boolean).join(", ")}
+                  </span>
+                )}
+                {fundingTotal !== null && fundingTotal !== undefined && (
+                  <span className="meta-chip">Funding: {fundingTotal} USD</span>
+                )}
+                {fundingRounds !== null && fundingRounds !== undefined && (
+                  <span className="meta-chip">Runder: {fundingRounds}</span>
+                )}
               </div>
             </div>
 
             <div className="insights-card">
               <h3>Styrker</h3>
               <ul className="insights-list">
-                {strengths.map((s) => (
+                {strengthsList.map((s) => (
                   <li key={s}>{s}</li>
                 ))}
               </ul>
@@ -357,81 +286,35 @@ function InsightsPage() {
             <div className="insights-card">
               <h3>Svakheter</h3>
               <ul className="insights-list">
-                {weaknesses.map((w) => (
+                {weaknessesList.map((w) => (
                   <li key={w}>{w}</li>
                 ))}
               </ul>
             </div>
 
-            <div className="insights-card">
-              <h3>Konkurrenter</h3>
-              <div className="insights-competitors">
-                {competitors.map((c) => (
-                  <div key={c.name} className="insights-competitor-card">
-                    <div className="insights-competitor-header">
-                      <div className="insights-competitor-icon">{c.icon}</div>
-                      <div>
-                        <div className="insights-competitor-name">{c.name}</div>
-                        <div className="insights-muted">{c.description}</div>
+            {parsedExplanation && (
+              <div className="insights-card">
+                <h3>Detaljert AI-kommentar</h3>
+                {parsedExplanation.overall_comment && (
+                  <p className="insights-muted">{parsedExplanation.overall_comment}</p>
+                )}
+                <div className="insights-explainer-grid">
+                  {["team", "market", "product", "potential", "valuation"].map((key) => {
+                    const section = parsedExplanation[key];
+                    if (!section) return null;
+                    return (
+                      <div key={key} className="insights-explainer-item">
+                        <div className="insights-chip label">{key.toUpperCase()}</div>
+                        {section.comment && <p>{section.comment}</p>}
+                        {section.score !== undefined && (
+                          <p className="insights-muted">Score: {section.score}/10</p>
+                        )}
                       </div>
-                    </div>
-                    <div className="insights-procon">
-                      <div>
-                        <div className="insights-chip success">Hva de gjør bra</div>
-                        <ul className="insights-list">
-                          {c.pros.map((p) => (
-                            <li key={p}>{p}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div>
-                        <div className="insights-chip danger">Hva de ikke løser for denne ideen</div>
-                        <ul className="insights-list">
-                          {c.cons.map((p) => (
-                            <li key={p}>{p}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="insights-card insights-next-card">
-              <div className="insights-next-header">
-                <h3>Neste steg</h3>
-                <p className="insights-muted">
-                  Basert på ideen din og vurderingen over, er disse neste stegene foreslått for å komme videre:
-                </p>
-              </div>
-              <div className="insights-next-steps">
-                <div className="insights-step-tile">
-                  <div className="insights-step-num accent">1</div>
-                  <h4>Snakk med 3–5 personer i målgruppen</h4>
-                  <p>
-                    Undersøk hvordan folk i nabolaget faktisk vil bruke appen. Spør om trygghet, hentepunkter,
-                    hvilke typer mat de ville delt.
-                  </p>
-                </div>
-                <div className="insights-step-tile">
-                  <div className="insights-step-num accent">2</div>
-                  <h4>Test ideen i liten skala</h4>
-                  <p>
-                    Opprett en liten pilot i eget nabolag: 3–10 deltakere. Se hvilke utfordringer som oppstår og
-                    hva som må justeres.
-                  </p>
-                </div>
-                <div className="insights-step-tile">
-                  <div className="insights-step-num accent">3</div>
-                  <h4>Avklar trygghetsmekanismer</h4>
-                  <p>
-                    Brukertillit er kritisk. Sett opp en enkel løsning: verifisering via SMS/e-post, tydelige
-                    bilder og hentetidspunkt.
-                  </p>
+                    );
+                  })}
                 </div>
               </div>
-            </div>
+            )}
 
             <div className="insights-actions">
               <button

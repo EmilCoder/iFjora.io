@@ -12,6 +12,10 @@ type IdeaResponse = {
     strengths?: string[];
     weaknesses?: string[];
     summary?: string;
+    explanation?: string;
+    dataScore?: number;
+    ideaScore?: number;
+    combinedScore?: number;
   };
 };
 
@@ -25,6 +29,14 @@ function IdeaSubmissionPage() {
   const [status, setStatus] = useState("");
   const [statusType, setStatusType] = useState<"idle" | "success" | "error" | "info">("idle");
   const [analysis, setAnalysis] = useState<IdeaResponse["analysis"] | null>(null);
+  const [market, setMarket] = useState("");
+  const [techService, setTechService] = useState("");
+  const [country, setCountry] = useState("NOR");
+  const [region, setRegion] = useState("");
+  const [city, setCity] = useState("");
+  const [fundingTotal, setFundingTotal] = useState<number>(0);
+  const [fundingRounds, setFundingRounds] = useState<number>(0);
+  const [team, setTeam] = useState("");
   const navigate = useNavigate();
 
   async function handleSubmit(e: FormEvent) {
@@ -48,7 +60,18 @@ function IdeaSubmissionPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ title, content }),
+        body: JSON.stringify({
+          title,
+          content,
+          market,
+          techService,
+          country,
+          region,
+          city,
+          fundingTotal,
+          fundingRounds,
+          team,
+        }),
       });
 
       if (!res.ok) {
@@ -64,6 +87,13 @@ function IdeaSubmissionPage() {
       setStatusType("success");
       setTitle("");
       setContent("");
+      setMarket("");
+      setTechService("");
+      setRegion("");
+      setCity("");
+      setFundingTotal(0);
+      setFundingRounds(0);
+      setTeam("");
 
       // Bli på siden og vis analysen her; ingen redirect
     } catch {
@@ -97,6 +127,122 @@ function IdeaSubmissionPage() {
         <h1>Din idé</h1>
 
         <form className="idea-form" onSubmit={handleSubmit}>
+          <div className="idea-grid">
+            <div className="idea-field">
+              <label className="idea-label" htmlFor="idea-market">
+                Marked / kategori
+              </label>
+              <input
+                id="idea-market"
+                className="idea-input"
+                type="text"
+                value={market}
+                onChange={(e) => setMarket(e.target.value)}
+                placeholder="F.eks. Software, Fintech, Health..."
+              />
+            </div>
+            <div className="idea-field">
+              <label className="idea-label" htmlFor="idea-tech">
+                Teknologi / tjeneste
+              </label>
+              <input
+                id="idea-tech"
+                className="idea-input"
+                type="text"
+                value={techService}
+                onChange={(e) => setTechService(e.target.value)}
+                placeholder="F.eks. AI-plattform, app, SaaS..."
+              />
+            </div>
+          </div>
+
+          <div className="idea-grid">
+            <div className="idea-field">
+              <label className="idea-label" htmlFor="idea-country">
+                Land (kode)
+              </label>
+              <input
+                id="idea-country"
+                className="idea-input"
+                type="text"
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                placeholder="NOR"
+              />
+            </div>
+            <div className="idea-field">
+              <label className="idea-label" htmlFor="idea-region">
+                Region
+              </label>
+              <input
+                id="idea-region"
+                className="idea-input"
+                type="text"
+                value={region}
+                onChange={(e) => setRegion(e.target.value)}
+                placeholder="F.eks. Oslo, Vestland..."
+              />
+            </div>
+            <div className="idea-field">
+              <label className="idea-label" htmlFor="idea-city">
+                By
+              </label>
+              <input
+                id="idea-city"
+                className="idea-input"
+                type="text"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="Oslo"
+              />
+            </div>
+          </div>
+
+          <div className="idea-grid">
+            <div className="idea-field">
+              <label className="idea-label" htmlFor="idea-funding-total">
+                Total funding (USD)
+              </label>
+              <input
+                id="idea-funding-total"
+                className="idea-input"
+                type="number"
+                min={0}
+                value={fundingTotal}
+                onChange={(e) => setFundingTotal(Number(e.target.value))}
+                placeholder="0"
+              />
+            </div>
+            <div className="idea-field">
+              <label className="idea-label" htmlFor="idea-funding-rounds">
+                Antall funding-runder
+              </label>
+              <input
+                id="idea-funding-rounds"
+                className="idea-input"
+                type="number"
+                min={0}
+                value={fundingRounds}
+                onChange={(e) => setFundingRounds(Number(e.target.value))}
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          <div className="idea-field">
+            <label className="idea-label" htmlFor="idea-team">
+              Teamets erfaring/kompetanse
+            </label>
+            <textarea
+              id="idea-team"
+              className="idea-textarea"
+              value={team}
+              onChange={(e) => setTeam(e.target.value)}
+              rows={3}
+              placeholder="Kort om teamet: erfaring, roller, tidligere prosjekter."
+            />
+          </div>
+
           <div className="idea-field">
             <label className="idea-label" htmlFor="idea-title">
               Tittel på din idé

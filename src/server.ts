@@ -12,6 +12,14 @@ type AuthBody = {
 type IdeaBody = {
   title: string;
   content: string;
+  market?: string | undefined;
+  techService?: string | undefined;
+  country?: string | undefined;
+  region?: string | undefined;
+  city?: string | undefined;
+  fundingTotal?: number | undefined;
+  fundingRounds?: number | undefined;
+  team?: string | undefined;
 };
 
 type AdminDeleteParams = {
@@ -30,6 +38,13 @@ type AdminIdeaResult = {
   title: string;
   content: string;
   createdAt: Date;
+  market?: string | null;
+  techService?: string | null;
+  country?: string | null;
+  region?: string | null;
+  city?: string | null;
+  fundingTotal?: number | null;
+  fundingRounds?: number | null;
   userId: number;
   userEmail: string;
   analysis?: AiAnalysis | undefined;
@@ -40,6 +55,13 @@ type IdeaResult = {
   title: string;
   content: string;
   createdAt: Date;
+  market?: string | null;
+  techService?: string | null;
+  country?: string | null;
+  region?: string | null;
+  city?: string | null;
+  fundingTotal?: number | null;
+  fundingRounds?: number | null;
   analysis?: AiAnalysis | undefined;
 };
 
@@ -48,6 +70,10 @@ type AiAnalysis = {
   strengths: string[];
   weaknesses: string[];
   summary: string;
+  explanation?: string | null;
+  dataScore?: number | undefined;
+  ideaScore?: number | undefined;
+  combinedScore?: number | undefined;
 };
 
 type UpdateMeBody = {
@@ -73,6 +99,7 @@ if (!jwtSecret) {
   throw new Error("JWT_SECRET mangler i .env");
 }
 const jwtSecretValue: string = jwtSecret;
+const aiApiUrl = process.env.AI_API_URL ?? "http://localhost:8001";
 
 await app.register(cors, {
   origin: true,
@@ -104,6 +131,58 @@ function simulateAiAnalysis(title: string, content: string): AiAnalysis {
     weaknesses,
     summary: `Foreløpig vurdering av "${title}": lovende, men krever videre utforskning.`,
   };
+}
+
+async function callAiService(payload: IdeaBody): Promise<AiAnalysis> {
+  try {
+    const res = await fetch(`${aiApiUrl}/analyze`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: payload.title,
+        content: payload.content,
+        market: payload.market,
+        tech_service: payload.techService,
+        country: payload.country,
+        region: payload.region,
+        city: payload.city,
+        funding_total: payload.fundingTotal,
+        funding_rounds: payload.fundingRounds,
+        team_description: payload.team,
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`AI-tjenesten svarte ${res.status}`);
+    }
+    const data = (await res.json()) as {
+      score: number;
+      strengths: string[];
+      weaknesses: string[];
+      summary: string;
+      explanation?: string | null;
+      data_score?: number;
+      idea_score?: number;
+      combined_score?: number;
+      dataScore?: number;
+      ideaScore?: number;
+      combinedScore?: number;
+    };
+
+    return {
+      score: data.score,
+      strengths: data.strengths ?? [],
+      weaknesses: data.weaknesses ?? [],
+      summary: data.summary ?? "",
+      explanation: data.explanation ?? null,
+      dataScore: data.dataScore ?? data.data_score,
+      ideaScore: data.ideaScore ?? data.idea_score,
+      combinedScore: data.combinedScore ?? data.combined_score ?? data.score,
+    };
+  } catch (err) {
+    // Fallback til dummy hvis AI-tjenesten ikke svarer
+    return simulateAiAnalysis(payload.title, payload.content);
+  }
 }
 
 function issueToken(payload: JwtPayload): string {
@@ -299,7 +378,18 @@ app.post<{ Body: IdeaBody }>("/api/ideas", async (request, reply) => {
     }
   }
 
-  const { title, content } = request.body;
+  const {
+    title,
+    content,
+    market,
+    techService,
+    country,
+    region,
+    city,
+    fundingTotal,
+    fundingRounds,
+    team,
+  } = request.body;
 
   if (!title || !content) {
     return reply
@@ -307,7 +397,18 @@ app.post<{ Body: IdeaBody }>("/api/ideas", async (request, reply) => {
       .send({ message: "title og content må fylles ut." });
   }
 
-  const analysis = simulateAiAnalysis(title, content);
+  const analysis = await callAiService({
+    title,
+    content,
+    market,
+    techService,
+    country,
+    region,
+    city,
+    fundingTotal,
+    fundingRounds,
+    team,
+  });
 
   // If authenticated, persist; if not, just return analysis.
   if (user) {
@@ -317,13 +418,34 @@ app.post<{ Body: IdeaBody }>("/api/ideas", async (request, reply) => {
     }
 
     const idea = await prisma.idea.create({
-      data: { userId: user.id, title, content, aiReply: JSON.stringify(analysis) },
+      data: {
+        userId: user.id,
+        title,
+        content,
+        market,
+        techService,
+        country,
+        region,
+        city,
+        fundingTotal: fundingTotal ?? null,
+        fundingRounds: fundingRounds ?? null,
+        // team beskrivelse lagres ikke i egen kolonne; kun med i AI-kallet
+        aiReply: JSON.stringify(analysis),
+      } as any,
     });
 
+    const created: any = idea;
     return reply.code(201).send({
       id: idea.id,
-      title: idea.title,
-      content: idea.content,
+      title: created.title,
+      content: created.content,
+      market: created.market ?? null,
+      techService: created.techService ?? null,
+      country: created.country ?? null,
+      region: created.region ?? null,
+      city: created.city ?? null,
+      fundingTotal: created.fundingTotal ?? null,
+      fundingRounds: created.fundingRounds ?? null,
       analysis,
     });
   }
@@ -348,19 +470,27 @@ app.get("/api/ideas", async (request, reply) => {
   });
 
   const result: IdeaResult[] = ideas.map((idea) => {
+    const record: any = idea;
     let parsed: AiAnalysis | undefined;
-    if (idea.aiReply) {
+    if (record.aiReply) {
       try {
-        parsed = JSON.parse(idea.aiReply) as AiAnalysis;
+        parsed = JSON.parse(record.aiReply) as AiAnalysis;
       } catch (err) {
         request.log.warn({ err }, "Kunne ikke parse aiReply");
       }
     }
     return {
-      id: idea.id,
-      title: idea.title,
-      content: idea.content,
-      createdAt: idea.createdAt,
+      id: record.id,
+      title: record.title,
+      content: record.content,
+      createdAt: record.createdAt,
+      market: record.market ?? null,
+      techService: record.techService ?? null,
+      country: record.country ?? null,
+      region: record.region ?? null,
+      city: record.city ?? null,
+      fundingTotal: record.fundingTotal ?? null,
+      fundingRounds: record.fundingRounds ?? null,
       analysis: parsed,
     };
   });
@@ -420,21 +550,29 @@ app.get("/api/admin/ideas", async (request, reply) => {
   });
 
   const result: AdminIdeaResult[] = ideas.map((idea) => {
+    const record: any = idea;
     let parsed: AiAnalysis | undefined;
-    if (idea.aiReply) {
+    if (record.aiReply) {
       try {
-        parsed = JSON.parse(idea.aiReply) as AiAnalysis;
+        parsed = JSON.parse(record.aiReply) as AiAnalysis;
       } catch (err) {
         request.log.warn({ err }, "Kunne ikke parse aiReply");
       }
     }
     return {
-      id: idea.id,
-      title: idea.title,
-      content: idea.content,
-      createdAt: idea.createdAt,
-      userId: idea.userId,
-      userEmail: idea.user.email,
+      id: record.id,
+      title: record.title,
+      content: record.content,
+      createdAt: record.createdAt,
+      market: record.market ?? null,
+      techService: record.techService ?? null,
+      country: record.country ?? null,
+      region: record.region ?? null,
+      city: record.city ?? null,
+      fundingTotal: record.fundingTotal ?? null,
+      fundingRounds: record.fundingRounds ?? null,
+      userId: record.userId,
+      userEmail: record.user.email,
       analysis: parsed,
     };
   });

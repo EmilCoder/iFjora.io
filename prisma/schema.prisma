@@ -21,8 +21,15 @@ model User {
 model Idea {
   id        Int      @id @default(autoincrement())
   title     String
-  content   String
+  content   String   @db.Text
   aiReply   String?  @db.Text
+  market        String?
+  techService   String?
+  country       String?
+  region        String?
+  city          String?
+  fundingTotal  Int?
+  fundingRounds Int?
   createdAt DateTime @default(now())
 
   userId Int

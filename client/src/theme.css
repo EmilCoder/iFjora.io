@@ -4,7 +4,7 @@
 
 /* 1. Design tokens (CSS-variabler) */
 :root {
-  /* Primærfarger (juster til dine Figma-verdier) */
+  /* Primærfarger */
   --fj-color-primary-600: #5B21E6; /* hover / aktiv */
   --fj-color-primary-500: #7C3AED; /* hovedlilla */
   --fj-color-primary-400: #A855F7; /* outline / sekundær */
@@ -95,7 +95,7 @@ body {
   background: var(--fj-color-bg-page);
 }
 
-/* Fjerne default margin på headings/paragraphs, så du styrer med spacing-variabler */
+
 h1, h2, h3, h4, h5, h6,
 p {
   margin: 0;
